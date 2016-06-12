@@ -59,8 +59,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.sites.liberation.export.SiteExporter;
 import com.google.sites.liberation.export.SiteExporterModule;
-import com.google.sites.liberation.imprt.SiteImporter;
-import com.google.sites.liberation.imprt.SiteImporterModule;
+
 
 /**
  * Provides a GUI for initiating a Sites import or export.
@@ -339,10 +338,7 @@ public class GuiMain {
         siteExporter.exportSite(host, domain, webspace, revisions,
             sitesService, directory, new GuiProgressListener(progressBar, textArea));
       } else {
-        Injector injector = Guice.createInjector(new SiteImporterModule());
-        SiteImporter siteImporter = injector.getInstance(SiteImporter.class);
-        siteImporter.importSite(host, domain, webspace, revisions,
-            sitesService, directory, new GuiProgressListener(progressBar, textArea));
+    	  throw new RuntimeException("site importer is removed");
       }
       doneButton.setEnabled(true);
     }
