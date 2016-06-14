@@ -23,8 +23,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.URI;
-import java.net.URISyntaxException;
+//import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
@@ -47,6 +50,7 @@ import javax.swing.border.EmptyBorder;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.auth.oauth2.TokenResponseException;
+import com.google.api.client.googleapis.GoogleUtils;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeRequestUrl;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
@@ -60,6 +64,7 @@ import com.google.inject.Injector;
 import com.google.sites.liberation.export.SiteExporter;
 import com.google.sites.liberation.export.SiteExporterModule;
 
+//import org.apache.commons.codec.binary.Base64;
 
 /**
  * Provides a GUI for initiating a Sites import or export.
@@ -90,6 +95,20 @@ public class GuiMain {
   private JProgressBar progressBar;
   private JButton doneButton;
 
+  static final String PROXY_HOST;
+  static final String PROXY_PORT;
+  static final String PROXY_USER;
+  static final String PROXY_PASS;
+  
+  static {
+	PROXY_HOST = System.getProperty("http.proxyHost");
+	PROXY_PORT = System.getProperty("http.proxyPort");
+	PROXY_USER = System.getProperty("http.proxyUser");
+	PROXY_PASS = System.getProperty("http.proxyPassword");
+    System.setProperty("https.proxyHost", PROXY_HOST);
+    System.setProperty("https.proxyPort", PROXY_PORT);
+  }
+  
   private GuiMain() {
     try {
       UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -115,10 +134,10 @@ public class GuiMain {
     hostField = new JTextField("sites.google.com");
     mainPanel.add(hostField);
     mainPanel.add(new JLabel(" Domain: "));
-    domainField = new JTextField();
+    domainField = new JTextField("google.com");
     mainPanel.add(domainField);
     mainPanel.add(new JLabel(" Webspace: "));
-    webspaceField = new JTextField();
+    webspaceField = new JTextField("gms_distribution");
     mainPanel.add(webspaceField);
     mainPanel.add(new JLabel(" Import/Export Revisions: "));
     revisionsCheckBox = new JCheckBox();
@@ -240,10 +259,15 @@ public class GuiMain {
    * 
    * @return OAuth 2.0 Credential instance.
    * @throws IOException
+ * @throws GeneralSecurityException 
+ * @throws NumberFormatException 
    */
-  private Credential getCredentials() throws IOException {
+  private Credential getCredentials() throws IOException, NumberFormatException, GeneralSecurityException {
     String code = tokenField.getText();
-    HttpTransport transport = new NetHttpTransport();
+    HttpTransport transport = new NetHttpTransport.Builder()
+    		 .trustCertificates(GoogleUtils.getCertificateTrustStore())
+            .setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(PROXY_HOST, Integer.parseInt(PROXY_PORT))))
+            .build();
     JacksonFactory jsonFactory = new JacksonFactory();
     String CLIENT_SECRET = "EPME5fbwiNLCcMsnj3jVoXeY";
 
@@ -293,7 +317,7 @@ public class GuiMain {
     } catch (TokenResponseException e) {
       error("The token is invalid!");
       return false;
-    } catch (IOException e) {
+    } catch (Throwable e) {
       error(e.toString());
       return false;
     }
@@ -332,6 +356,11 @@ public class GuiMain {
       String applicationName = "sites-liberation-5";
       SitesService sitesService = new SitesService(applicationName);
       sitesService.setOAuth2Credentials(credential);
+      
+      //String encoded = new String(Base64.encodeBase64(new String(PROXY_USER + ":" + PROXY_PASS).getBytes()));
+      //String base64encodedCredentials = "Basic " + encoded;
+      //sitesService.getRequestFactory().setPrivateHeader("Proxy-Authorization", base64encodedCredentials);
+      
       if (export) {
         Injector injector = Guice.createInjector(new SiteExporterModule());
         SiteExporter siteExporter = injector.getInstance(SiteExporter.class);
