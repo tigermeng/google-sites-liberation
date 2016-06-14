@@ -22,12 +22,12 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.IOException;
+import java.io.FileInputStream;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
-import java.net.URI;
-//import java.net.URISyntaxException;
-import java.security.GeneralSecurityException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
@@ -35,10 +35,9 @@ import java.util.logging.Logger;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JFileChooser;
+
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
@@ -49,22 +48,24 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.border.EmptyBorder;
 
 import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.auth.oauth2.TokenResponseException;
+
+import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
+import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.GoogleUtils;
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeRequestUrl;
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
+import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.store.FileDataStoreFactory;
+
 import com.google.gdata.client.sites.SitesService;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.sites.liberation.export.SiteExporter;
 import com.google.sites.liberation.export.SiteExporterModule;
 
-//import org.apache.commons.codec.binary.Base64;
 
 /**
  * Provides a GUI for initiating a Sites import or export.
@@ -77,9 +78,8 @@ public class GuiMain {
       .getCanonicalName());
 
   private List<String> SCOPES = Arrays
-      .asList("https://sites.google.com/feeds");
-  private String CLIENT_ID = "457238310484-d7jjdra9vvij0ubk3k7vr59n8cb7eceh.apps.googleusercontent.com";
-  private String REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
+      .asList("https://sites.google.com/feeds"); //TODO do i need drive scope? DriveScopes.DRIVE_METADATA_READONLY
+
   private Credential credential = null;
 
   private JFrame optionsFrame;
@@ -87,13 +87,30 @@ public class GuiMain {
   private JTextField hostField;
   private JTextField domainField;
   private JTextField webspaceField;
-  private JTextField tokenField;
+
   private JTextField fileField;
-  private JFileChooser fileChooser;
   private JCheckBox revisionsCheckBox;
   private JTextArea textArea;
   private JProgressBar progressBar;
   private JButton doneButton;
+
+  /** Directory to store user credentials for this application. */
+  private static final java.io.File DATA_STORE_DIR = new java.io.File(
+      System.getProperty("user.home"), ".google-engineer-credentials/ggdownloader"); //TODO must put in a safe folder, not 666/777
+
+  // don't share the secret file
+  private static final java.io.File SECRET_FILE = new java.io.File(
+	      System.getProperty("user.home"), "client_secrets.json");
+
+  /** Global instance of the {@link FileDataStoreFactory}. */
+  private static FileDataStoreFactory DATA_STORE_FACTORY;
+
+  /** Global instance of the JSON factory. */
+  private static final JsonFactory JSON_FACTORY =
+      JacksonFactory.getDefaultInstance();
+
+  /** Global instance of the HTTP transport. */
+  private static HttpTransport HTTP_TRANSPORT;
 
   static final String PROXY_HOST;
   static final String PROXY_PORT;
@@ -107,9 +124,19 @@ public class GuiMain {
 	PROXY_PASS = System.getProperty("http.proxyPassword");
     System.setProperty("https.proxyHost", PROXY_HOST);
     System.setProperty("https.proxyPort", PROXY_PORT);
-  }
-  
-  private GuiMain() {
+    
+      try {
+          HTTP_TRANSPORT = new NetHttpTransport.Builder()
+            .trustCertificates(GoogleUtils.getCertificateTrustStore())
+            .setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(PROXY_HOST, Integer.parseInt(PROXY_PORT))))
+            .build();
+          DATA_STORE_FACTORY = new FileDataStoreFactory(DATA_STORE_DIR);
+      } catch (Throwable t) {
+          t.printStackTrace();
+          System.exit(1);
+      }
+  }  
+  private GuiMain() throws Exception {
     try {
       UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
     } catch (ClassNotFoundException e) {
@@ -123,9 +150,11 @@ public class GuiMain {
     }
     initOptionsFrame();
     initProgressFrame();
+    
+    startAction();
   }
 
-  private void initOptionsFrame() {
+  private void initOptionsFrame() throws Exception {
     optionsFrame = new JFrame("Sites Import/Export");
     JPanel mainPanel = new JPanel();
     GridLayout layout = new GridLayout(0, 2);
@@ -143,40 +172,22 @@ public class GuiMain {
     revisionsCheckBox = new JCheckBox();
     mainPanel.add(revisionsCheckBox);
     fileField = new JTextField("/home/CORPUSERS/28851505/0testing"); //TODO
-    //fileField.setEditable(false);
+
 
     JButton directoryButton = new JButton("Choose Target Directory");
     mainPanel.add(directoryButton);
     mainPanel.add(fileField);
 
-    JButton openBrowserButton = new JButton("Get a token from browser");
-    openBrowserButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        openBrowserAndGetToken();
-      }
-    });
-    mainPanel.add(openBrowserButton);
-    tokenField = new JTextField();
-    mainPanel.add(tokenField);
 
     mainPanel.add(new JPanel());
     mainPanel.add(new JPanel());
-    JButton exportButton = new JButton("Export from Sites");
-    exportButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        if (checkArguments()) {
-          startAction();
-        }
-      }
-    });
-    mainPanel.add(exportButton);
     mainPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
     optionsFrame.getContentPane().add(mainPanel);
     optionsFrame.pack();
     optionsFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     optionsFrame.setVisible(true);
+    
+
   }
 
   private void initProgressFrame() {
@@ -218,109 +229,57 @@ public class GuiMain {
     progressFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
   }
 
-  private void openBrowserAndGetToken() {
-    // Step 1: Authorize -->
-    String authorizationUrl = new GoogleAuthorizationCodeRequestUrl(
-        CLIENT_ID, REDIRECT_URI, SCOPES).build();
-    try {
-      // Point or redirect your user to the authorizationUrl.
-      java.awt.Desktop.getDesktop().browse(new URI(authorizationUrl));
-    } catch (Exception e) {
-      LOGGER.warning("Unable to open browser: " + e.toString());
-      LOGGER.info("Go to: " + authorizationUrl);
-      JOptionPane.showMessageDialog(optionsFrame, "Cannot open browser. Check the console for the necessary URL.",
-                                    "Error", JOptionPane.ERROR_MESSAGE);
-    }
-    // End of Step 1 <--
-  }
 
   /**
-   * Retrieve OAuth 2.0 credentials.
-   * 
-   * @return OAuth 2.0 Credential instance.
-   * @throws IOException
- * @throws GeneralSecurityException 
- * @throws NumberFormatException 
+   * Creates an authorized Credential object.
+   * @return an authorized Credential object.
+ * @throws Exception 
    */
-  private Credential getCredentials() throws IOException, NumberFormatException, GeneralSecurityException {
-    String code = tokenField.getText();
-    HttpTransport transport = new NetHttpTransport.Builder()
-    		 .trustCertificates(GoogleUtils.getCertificateTrustStore())
-            .setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(PROXY_HOST, Integer.parseInt(PROXY_PORT))))
-            .build();
-    JacksonFactory jsonFactory = new JacksonFactory();
-    String CLIENT_SECRET = "EPME5fbwiNLCcMsnj3jVoXeY";
+  private Credential getCredentials() throws Exception {
+      // Load client secrets.
+      InputStream in = new FileInputStream(SECRET_FILE);
+      GoogleClientSecrets clientSecrets =
+          GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
 
-    // Step 2: Exchange -->
-    GoogleTokenResponse response = new GoogleAuthorizationCodeTokenRequest(
-        transport, jsonFactory, CLIENT_ID, CLIENT_SECRET, code,
-        REDIRECT_URI).execute();
-    // End of Step 2 <--
-
-    // Build a new GoogleCredential instance and return it.
-    return new GoogleCredential.Builder()
-        .setClientSecrets(CLIENT_ID, CLIENT_SECRET)
-        .setJsonFactory(jsonFactory).setTransport(transport).build()
-        .setAccessToken(response.getAccessToken())
-        .setRefreshToken(response.getRefreshToken());
+      // Build flow and trigger user authorization request.
+      GoogleAuthorizationCodeFlow flow =
+              new GoogleAuthorizationCodeFlow.Builder(
+                      HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
+              .setDataStoreFactory(DATA_STORE_FACTORY)
+              .setAccessType("offline")
+              .build();
+      Credential credential = new AuthorizationCodeInstalledApp(
+          flow, new LocalServerReceiver()).authorize("user");
+      System.out.println(
+              "Credentials saved to " + DATA_STORE_DIR.getAbsolutePath());
+      return credential;
   }
-
-  private void startAction() {
+  
+  
+  private void startAction() throws Exception {
     optionsFrame.setVisible(false);
     progressBar.setValue(0);
     progressBar.setIndeterminate(true);
     textArea.setText("");
     progressFrame.setVisible(true);
-    new Thread(new ImportExportRunnable()).start();
+    run();
   }
 
-  private boolean checkArguments() {
-    if (hostField.getText().equals("")) {
-      error("Please provide a host name.");
-      return false;
-    }
-    if (webspaceField.getText().equals("")) {
-      error("Please provide a webspace (site name).");
-      return false;
-    }
-    if (tokenField.getText().equals("")) {
-      error("Please provide a token.");
-      return false;
-    }
-    if (fileField.getText().equals("")) {
-      error("Please provide a target directory.");
-      return false;
-    }
-    try {
-      if (credential == null)
-        credential = getCredentials();
-    } catch (TokenResponseException e) {
-      error("The token is invalid!");
-      return false;
-    } catch (Throwable e) {
-      error(e.toString());
-      return false;
-    }
-    return true;
-  }
 
-  private void error(String message) {
-    JOptionPane.showMessageDialog(optionsFrame, message, "Error",
-        JOptionPane.ERROR_MESSAGE);
-  }
 
   /**
    * Launches a new GuiMain, allowing a user to graphically initiate a Sites
    * import or export.
+ * @throws Exception 
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
     new GuiMain();
   }
 
-  private class ImportExportRunnable implements Runnable {
 
-    @Override
-    public void run() {
+
+
+    private void run() throws Exception {
       String host = hostField.getText();
       String domain = (domainField.getText().equals("")) ? null
           : domainField.getText();
@@ -329,6 +288,7 @@ public class GuiMain {
       File directory = new File(fileField.getText());
       String applicationName = "sites-liberation-5";
       SitesService sitesService = new SitesService(applicationName);
+      credential = getCredentials();
       sitesService.setOAuth2Credentials(credential);
       
       //String encoded = new String(Base64.encodeBase64(new String(PROXY_USER + ":" + PROXY_PASS).getBytes()));
@@ -343,5 +303,5 @@ public class GuiMain {
         doneButton.setEnabled(true);
     }
 
-  }
+
 }
