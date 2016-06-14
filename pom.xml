@@ -7,10 +7,10 @@
     <artifactId>google</artifactId>
     <version>1</version>
   </parent>
-  <groupId>com.google.gdata</groupId>
-  <artifactId>google-sites-liberation</artifactId>
-  <name>Google Sites Liberation</name>
-  <version>1.0.6</version>
+  <groupId>com.sonymobile.ggdownloader</groupId>
+  <artifactId>my-sites-liberation</artifactId>
+  <name>My Sites Liberation</name>
+  <version>1.0.0</version>
   <repositories>
     <repository>
       <id>local</id>
@@ -67,7 +67,7 @@
     <dependency>
       <groupId>com.google.apis</groupId>
       <artifactId>google-api-services-oauth2</artifactId>
-      <version>v2-rev93-1.20.0</version>
+      <version>v2-rev112-1.22.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.inject</groupId>
