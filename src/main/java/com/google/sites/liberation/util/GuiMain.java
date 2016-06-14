@@ -142,20 +142,10 @@ public class GuiMain {
     mainPanel.add(new JLabel(" Import/Export Revisions: "));
     revisionsCheckBox = new JCheckBox();
     mainPanel.add(revisionsCheckBox);
-    fileField = new JTextField();
-    fileField.setEditable(false);
-    fileChooser = new JFileChooser();
+    fileField = new JTextField("/home/CORPUSERS/28851505/0testing"); //TODO
+    //fileField.setEditable(false);
+
     JButton directoryButton = new JButton("Choose Target Directory");
-    fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-    directoryButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        int result = fileChooser.showOpenDialog(optionsFrame);
-        if (result == JFileChooser.APPROVE_OPTION) {
-          fileField.setText(fileChooser.getSelectedFile().getPath());
-        }
-      }
-    });
     mainPanel.add(directoryButton);
     mainPanel.add(fileField);
 
@@ -172,22 +162,12 @@ public class GuiMain {
 
     mainPanel.add(new JPanel());
     mainPanel.add(new JPanel());
-    JButton importButton = new JButton("Import to Sites");
-    importButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        if (checkArguments()) {
-          startAction(false);
-        }
-      }
-    });
-    mainPanel.add(importButton);
     JButton exportButton = new JButton("Export from Sites");
     exportButton.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
         if (checkArguments()) {
-          startAction(true);
+          startAction();
         }
       }
     });
@@ -285,13 +265,13 @@ public class GuiMain {
         .setRefreshToken(response.getRefreshToken());
   }
 
-  private void startAction(boolean export) {
+  private void startAction() {
     optionsFrame.setVisible(false);
     progressBar.setValue(0);
     progressBar.setIndeterminate(true);
     textArea.setText("");
     progressFrame.setVisible(true);
-    new Thread(new ImportExportRunnable(export)).start();
+    new Thread(new ImportExportRunnable()).start();
   }
 
   private boolean checkArguments() {
@@ -307,7 +287,7 @@ public class GuiMain {
       error("Please provide a token.");
       return false;
     }
-    if (fileChooser.getSelectedFile() == null) {
+    if (fileField.getText().equals("")) {
       error("Please provide a target directory.");
       return false;
     }
@@ -339,12 +319,6 @@ public class GuiMain {
 
   private class ImportExportRunnable implements Runnable {
 
-    private boolean export;
-
-    ImportExportRunnable(boolean export) {
-      this.export = export;
-    }
-
     @Override
     public void run() {
       String host = hostField.getText();
@@ -352,7 +326,7 @@ public class GuiMain {
           : domainField.getText();
       String webspace = webspaceField.getText();
       boolean revisions = revisionsCheckBox.isSelected();
-      File directory = fileChooser.getSelectedFile();
+      File directory = new File(fileField.getText());
       String applicationName = "sites-liberation-5";
       SitesService sitesService = new SitesService(applicationName);
       sitesService.setOAuth2Credentials(credential);
@@ -361,15 +335,12 @@ public class GuiMain {
       //String base64encodedCredentials = "Basic " + encoded;
       //sitesService.getRequestFactory().setPrivateHeader("Proxy-Authorization", base64encodedCredentials);
       
-      if (export) {
         Injector injector = Guice.createInjector(new SiteExporterModule());
         SiteExporter siteExporter = injector.getInstance(SiteExporter.class);
         siteExporter.exportSite(host, domain, webspace, revisions,
             sitesService, directory, new GuiProgressListener(progressBar, textArea));
-      } else {
-    	  throw new RuntimeException("site importer is removed");
-      }
-      doneButton.setEnabled(true);
+
+        doneButton.setEnabled(true);
     }
 
   }
