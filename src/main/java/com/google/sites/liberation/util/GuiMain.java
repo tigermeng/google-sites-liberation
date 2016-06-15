@@ -33,19 +33,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
 
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JProgressBar;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.border.EmptyBorder;
 
 import com.google.api.client.auth.oauth2.Credential;
 
@@ -68,9 +56,10 @@ import com.google.sites.liberation.export.SiteExporterModule;
 
 
 /**
- * Provides a GUI for initiating a Sites import or export.
+ * Provides a script for initiating a Sites export.
  * 
  * @author bsimon@google.com (Benjamin Simon)
+ * @author tiger.meng@sonymobile.com
  */
 public class GuiMain {
 
@@ -82,17 +71,8 @@ public class GuiMain {
 
   private Credential credential = null;
 
-  private JFrame optionsFrame;
-  private JFrame progressFrame;
-  private JTextField hostField;
-  private JTextField domainField;
-  private JTextField webspaceField;
 
-  private JTextField fileField;
-  private JCheckBox revisionsCheckBox;
-  private JTextArea textArea;
-  private JProgressBar progressBar;
-  private JButton doneButton;
+
 
   /** Directory to store user credentials for this application. */
   private static final java.io.File DATA_STORE_DIR = new java.io.File(
@@ -135,98 +115,12 @@ public class GuiMain {
           t.printStackTrace();
           System.exit(1);
       }
-  }  
+  }
+
   private GuiMain() throws Exception {
-    try {
-      UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-    } catch (ClassNotFoundException e) {
-      LOGGER.log(Level.WARNING, "Unable to set look and feel.", e);
-    } catch (InstantiationException e) {
-      LOGGER.log(Level.WARNING, "Unable to set look and feel.", e);
-    } catch (IllegalAccessException e) {
-      LOGGER.log(Level.WARNING, "Unable to set look and feel.", e);
-    } catch (UnsupportedLookAndFeelException e) {
-      LOGGER.log(Level.WARNING, "Unable to set look and feel.", e);
-    }
-    initOptionsFrame();
-    initProgressFrame();
+
     
     startAction();
-  }
-
-  private void initOptionsFrame() throws Exception {
-    optionsFrame = new JFrame("Sites Import/Export");
-    JPanel mainPanel = new JPanel();
-    GridLayout layout = new GridLayout(0, 2);
-    mainPanel.setLayout(layout);
-    mainPanel.add(new JLabel(" Host: "));
-    hostField = new JTextField("sites.google.com");
-    mainPanel.add(hostField);
-    mainPanel.add(new JLabel(" Domain: "));
-    domainField = new JTextField("google.com");
-    mainPanel.add(domainField);
-    mainPanel.add(new JLabel(" Webspace: "));
-    webspaceField = new JTextField("gms_distribution");
-    mainPanel.add(webspaceField);
-    mainPanel.add(new JLabel(" Import/Export Revisions: "));
-    revisionsCheckBox = new JCheckBox();
-    mainPanel.add(revisionsCheckBox);
-    fileField = new JTextField("/home/CORPUSERS/28851505/0testing"); //TODO
-
-
-    JButton directoryButton = new JButton("Choose Target Directory");
-    mainPanel.add(directoryButton);
-    mainPanel.add(fileField);
-
-
-    mainPanel.add(new JPanel());
-    mainPanel.add(new JPanel());
-    mainPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-    optionsFrame.getContentPane().add(mainPanel);
-    optionsFrame.pack();
-    optionsFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    optionsFrame.setVisible(true);
-    
-
-  }
-
-  private void initProgressFrame() {
-    progressFrame = new JFrame("Progress");
-    JPanel mainPanel = new JPanel();
-    mainPanel.setLayout(new BorderLayout());
-    progressBar = new JProgressBar();
-    progressBar.setMinimum(0);
-    progressBar.setMaximum(100);
-    progressBar.setPreferredSize(new Dimension(500, 25));
-    JPanel progressPanel = new JPanel();
-    progressPanel.add(progressBar);
-    progressPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
-    mainPanel.add(progressPanel, BorderLayout.NORTH);
-    textArea = new JTextArea();
-    textArea.setRows(20);
-    textArea.setEditable(false);
-    JScrollPane scrollPane = new JScrollPane(textArea);
-    scrollPane.setBorder(new EmptyBorder(10, 10, 10, 10));
-    mainPanel.add(scrollPane, BorderLayout.CENTER);
-    doneButton = new JButton("Done");
-    doneButton.setPreferredSize(new Dimension(495, 25));
-    doneButton.setEnabled(false);
-    doneButton.addActionListener(new ActionListener() {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        doneButton.setEnabled(false);
-        progressFrame.setVisible(false);
-        optionsFrame.setVisible(true);
-      }
-    });
-    JPanel donePanel = new JPanel();
-    donePanel.setLayout(new BorderLayout());
-    donePanel.add(doneButton, BorderLayout.CENTER);
-    donePanel.setBorder(new EmptyBorder(0, 10, 10, 10));
-    mainPanel.add(donePanel, BorderLayout.SOUTH);
-    progressFrame.getContentPane().add(mainPanel);
-    progressFrame.pack();
-    progressFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
   }
 
 
@@ -257,11 +151,6 @@ public class GuiMain {
   
   
   private void startAction() throws Exception {
-    optionsFrame.setVisible(false);
-    progressBar.setValue(0);
-    progressBar.setIndeterminate(true);
-    textArea.setText("");
-    progressFrame.setVisible(true);
     run();
   }
 
@@ -280,13 +169,12 @@ public class GuiMain {
 
 
     private void run() throws Exception {
-      String host = hostField.getText();
-      String domain = (domainField.getText().equals("")) ? null
-          : domainField.getText();
-      String webspace = webspaceField.getText();
-      boolean revisions = revisionsCheckBox.isSelected();
-      File directory = new File(fileField.getText());
-      String applicationName = "sites-liberation-5";
+      String host = "sites.google.com"; //TODO
+      String domain = "google.com"; //TODO
+      String webspace = "gms_distribution"; //TODO
+      boolean revisions = false; //revisionsCheckBox.isSelected();
+      File directory = new File("/home/CORPUSERS/28851505/0testing");
+      String applicationName = "sites-liberation-5"; //javadoc said google will monitor the name, so...
       SitesService sitesService = new SitesService(applicationName);
       credential = getCredentials();
       sitesService.setOAuth2Credentials(credential);
@@ -298,9 +186,8 @@ public class GuiMain {
         Injector injector = Guice.createInjector(new SiteExporterModule());
         SiteExporter siteExporter = injector.getInstance(SiteExporter.class);
         siteExporter.exportSite(host, domain, webspace, revisions,
-            sitesService, directory, new GuiProgressListener(progressBar, textArea));
+            sitesService, directory, new StdOutProgressListener());
 
-        doneButton.setEnabled(true);
     }
 
 
