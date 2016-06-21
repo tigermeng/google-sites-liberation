@@ -1,22 +1,27 @@
-# Google Sites Import/Export Tool
+# Google Sites Export Tool (Script variant)
 
-This is an import/export tool for [Google Sites](http://sites.google.com/).  Using [HTML Microformats](http://microformats.org/) it generates an XHTML version of Sites content suitable for offline browsing and simple HTTP hosting, which is also able to be losslessly imported back into sites.
+This is an export tool for [Google Sites](http://sites.google.com/).  Using [HTML Microformats](http://microformats.org/) it generates an XHTML version of Sites content suitable for offline browsing and simple HTTP hosting
 
-Download the version [1.0.6](https://sih4sing5hong5.github.io/google-sites-liberation/jar/google-sites-liberation-1.0.6-jar-with-dependencies.jar) and execute it now!
+key feature inherited from fork, see fork from:
+support OAuth 2.0, which is not supported by official google site API anymore
 
-![http://google-sites-liberation.googlecode.com/files/gui.png](http://google-sites-liberation.googlecode.com/files/gui.png)
+newly added features:
+cmdline run only
+stored credential support for oauth, replaced expireable one time access token from forked project 
+support proxy
+
+Download the latest [release](https://github.com/tigermeng/google-sites-liberation/releases) and execute it now!
 
 ## User's Guide
 
-The Sites Liberation import/export tool uses the Sites GData API to allow users to export an entire Google Site as static html pages to a directory on their hard drive. The html is embedded with meta-data based on the hAtom microformats specification, to allow the re-import of html back into Google Sites. Applications of the tool include backing up a Google Site, switching to or from a different service, and editing a Site offline.
+The Sites Liberation export tool uses the Sites GData API to allow users to export an entire Google Site as static html pages to a directory on their hard drive. The html is embedded with meta-data based on the hAtom microformats specification, to allow the re-import of html back into Google Sites. Applications of the tool include backing up a Google Site, switching to or from a different service, and editing a Site offline.
 
 ### Simple Execution
 
-Download the version [1.0.6](https://sih4sing5hong5.github.io/google-sites-liberation/jar/google-sites-liberation-1.0.6-jar-with-dependencies.jar) now! The tool has been packaged as an executable jar.  If [Java](http://java.sun.com/) is installed, just **double-click on it**.
 
-You can run it in command line, too.
+You can run it in command line.
 ```bash
-java -jar google-sites-liberation-1.0.6-jar-with-dependencies.jar
+java -jar my-sites-liberation-1.0.0-jar-with-dependencies.jar
 ```
 
 ### Advanced Execution
@@ -28,10 +33,11 @@ The tool is written in Java and the source code is currently hosted at code.goog
 | Host | `-h` | If not sites.google.com, specifies the Site's host (optional).  Used for debugging. |
 | Domian | `-d` | If the site is a Google Apps site, specifies the domain, e.g. dataliberation.org (optional). |
 | Webspace | `-w` | Specifies the webspace of the Site, e.g. "dataliberation" for a site located at `http://sites.google.com/a/domain/dataliberation` |
-| Username | `-u` | Specifies the user name used to access the Site. |
-| Password | `-p` | Specifies the password used to access the Site. |
-| Directory | `-f` | Specifies the root directory to export to / import from. |
-| Revisions | `-r` | If this flag is included, then the revisions of all of the pages in the Site will be exported/imported as well as the current page (optional). |
+| Username | `-proxy` | Specifies the http proxy address used to access internet. |
+| Username | `-user` | Specifies the proxy user name used to access internet. |
+| Password | `-pass` | Specifies the proxy password used to access internet. |
+| Password | `-smbJson` | Load the client secret from smb://abc/xyz/client_secret.json |
+| Revisions | `-r` | If this flag is included, then the revisions of all of the pages in the Site will be exported as well as the current page (optional). |
 
 ### Structure
 
