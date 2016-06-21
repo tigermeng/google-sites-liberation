@@ -33,6 +33,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.sites.liberation.util.StdOutProgressListener;
 
+import jcifs.smb.NtlmPasswordAuthentication;
+import jcifs.smb.SmbFile;
 
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
@@ -79,23 +81,17 @@ public class Main {
   @Option(name="-r", usage="export revisions as well as current content")
   private boolean exportRevisions = false;
   
-  @Option(name="-f", usage="directory in which to export")
-  private File directory = new File("/home/CORPUSERS/28851505/0testing"); //TODO
-  
   @Option(name="-h", usage="host")
   private String host = "sites.google.com";
+
+  @Option(name="-smbJson", usage="load client secret json from a password protect samba folder")
+  private String smbJson = null; // e.g. smb://cnbjmsw36/users/28851505/client_secrets.json"
+  
   
 	private List<String> SCOPES = Arrays.asList("https://sites.google.com/feeds");
-	// TODO do i need drive scope? DriveScopes.DRIVE_METADATA_READONLY
 
 	/** Directory to store user credentials for this application. */
-	private static final java.io.File DATA_STORE_DIR = new java.io.File(System.getProperty("user.home"),
-			".google-engineer-credentials/ggdownloader");
-	// TODO must put in a safe folder, not 666/777
-
-	// don't share the secret file
-	private static final java.io.File SECRET_FILE = new java.io.File(System.getProperty("user.home"),
-			"client_secrets.json");
+	private static final java.io.File DATA_STORE_DIR = new java.io.File("./ggdownloader");
 
 	/** Global instance of the {@link FileDataStoreFactory}. */
 	private static FileDataStoreFactory DATA_STORE_FACTORY;
@@ -132,8 +128,15 @@ public class Main {
 			}
 
 			DATA_STORE_FACTORY = new FileDataStoreFactory(DATA_STORE_DIR);
-			GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(new FileInputStream(SECRET_FILE)));
-
+			InputStreamReader in;
+			if (smbJson != null) {
+				NtlmPasswordAuthentication auth = new NtlmPasswordAuthentication("", user, pass);
+				SmbFile smbFile = new SmbFile(smbJson, auth);
+				in = new InputStreamReader(smbFile.getInputStream());
+			} else {
+				in = new InputStreamReader(new FileInputStream(new java.io.File("./client_secrets.json")));
+			}
+			GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, in);
 			// Build flow and trigger user authorization request.
 			GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(HTTP_TRANSPORT, JSON_FACTORY,
 					clientSecrets, SCOPES).setDataStoreFactory(DATA_STORE_FACTORY).setAccessType("offline").build();
@@ -143,6 +146,7 @@ public class Main {
 			SitesService sitesService = new SitesService("google-sites-liberation");
 			sitesService.setOAuth2Credentials(credential);
 
+			File directory = new File(webspace);
 			siteExporter.exportSite(host, domain, webspace, exportRevisions, sitesService, directory,
 					new StdOutProgressListener());
 		} catch (Exception e) {
