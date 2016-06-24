@@ -8,7 +8,7 @@ support OAuth 2.0, which is not supported by official google site API anymore
 newly added features:
 cmdline run only
 stored credential support for oauth, replaced expireable one time access token from forked project 
-support proxy
+support password protected proxy
 
 Download the latest [release](https://github.com/tigermeng/google-sites-liberation/releases) and execute it now!
 
@@ -21,8 +21,12 @@ The Sites Liberation export tool uses the Sites GData API to allow users to expo
 
 You can run it in command line.
 ```bash
-java -jar my-sites-liberation-1.0.0-jar-with-dependencies.jar
+java -jar my-sites-liberation-1.0.0-jar-with-dependencies.jar -w the-site-to-export
 ```
+
+on the first run, browser will be launched, to let google user login (if not yet) and grant permission to this app to manipulate user's google sites. Allow the request, credential will be stored locally. 
+
+on the rest run, no browser or human interaction is needed anymore. the app will use StoredCredential to dump site.
 
 ### Advanced Execution
 
@@ -33,10 +37,10 @@ The tool is written in Java and the source code is currently hosted at code.goog
 | Host | `-h` | If not sites.google.com, specifies the Site's host (optional).  Used for debugging. |
 | Domian | `-d` | If the site is a Google Apps site, specifies the domain, e.g. dataliberation.org (optional). |
 | Webspace | `-w` | Specifies the webspace of the Site, e.g. "dataliberation" for a site located at `http://sites.google.com/a/domain/dataliberation` |
-| Username | `-proxy` | Specifies the http proxy address used to access internet. |
-| Username | `-user` | Specifies the proxy user name used to access internet. |
-| Password | `-pass` | Specifies the proxy password used to access internet. |
-| Password | `-smbJson` | Load the client secret from smb://abc/xyz/client_secret.json |
+| Proxy | `-proxy` | Specifies the http proxy address used to access internet. |
+| Proxy Username | `-user` | Specifies the proxy user name used to access internet. |
+| Proxy Password | `-pass` | Specifies the proxy password used to access internet. |
+| smbJson | `-smbJson` | Load the client secret from smb://abc/xyz/client_secret.json |
 | Revisions | `-r` | If this flag is included, then the revisions of all of the pages in the Site will be exported as well as the current page (optional). |
 
 ### Structure
@@ -67,7 +71,6 @@ The parent link and pageName elements in the GData feeds are not embedded in the
   * The id attribute is used to store entry id's. However, these id's are URL's and this may not constitute valid html.
 
 ## Development
-[![Build Status](https://travis-ci.org/sih4sing5hong5/google-sites-liberation.svg?branch=master)](https://travis-ci.org/sih4sing5hong5/google-sites-liberation)
 
   The latest, most stable version of the code will always be located in the `master` branch.  See the revision history for information about the code in any other branch.
 
@@ -98,6 +101,7 @@ sudo apt-get install -y openjdk-7-jdk maven2
 ### Reference
 * [Google Developers Console](https://console.developers.google.com/project)
 * [OAuth2 example](http://stackoverflow.com/questions/10242751/oauth-invalid-token-request-token-used-when-not-allowed)
+* [OAuth2 guide](https://support.google.com/cloud/answer/6158849)
 * [Google Sites API](https://developers.google.com/google-apps/sites/docs/developers_guide)
 * [Google Data APIs Client Library](https://developers.google.com/gdata/javadoc/)
   * [Code in Github](https://github.com/google/gdata-java-client)
