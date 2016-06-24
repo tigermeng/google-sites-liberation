@@ -153,7 +153,7 @@ public class Main {
 			e.printStackTrace();
 			LOGGER.log(Level.SEVERE, e.getMessage());
 			parser.printUsage(System.err);
-			return;
+			System.exit(1);
 		}
 
 	}
