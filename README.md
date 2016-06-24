@@ -30,12 +30,12 @@ on the rest run, no browser or human interaction is needed anymore. the app will
 
 ### Advanced Execution
 
-The tool is written in Java and the source code is currently hosted at code.google.com. Upon building the tool, there are three main classes. The class com.google.sites.liberation.export.Main allows the execution of a Sites export from the command line. The class com.google.sites.liberation.imprt.Main is the equivalent for a Sites import (note that the package name is "imprt," due to the Java keyword collision). The class com.google.sites.liberation.util.GuiMain provides a graphical user interface for launching both imports and exports. In all cases, the import/export takes the following arguments:
+The tool is written in Java. Upon building the tool, there are 1 main class. The class com.google.sites.liberation.export.Main allows the execution of a Sites export from the command line. It takes the following arguments:
 
 | Name | Flag | Usage |
 |:-----|:-----|:------|
-| Host | `-h` | If not sites.google.com, specifies the Site's host (optional).  Used for debugging. |
-| Domian | `-d` | If the site is a Google Apps site, specifies the domain, e.g. dataliberation.org (optional). |
+| Host | `-h` | If not sites.google.com, specifies the Site's host  |
+| Domian | `-d` | If the site is a Google Apps site, specifies the domain  |
 | Webspace | `-w` | Specifies the webspace of the Site, e.g. "dataliberation" for a site located at `http://sites.google.com/a/domain/dataliberation` |
 | Proxy | `-proxy` | Specifies the http proxy address used to access internet. |
 | Proxy Username | `-user` | Specifies the proxy user name used to access internet. |
