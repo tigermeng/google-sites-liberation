@@ -39,6 +39,7 @@ import jcifs.smb.SmbFile;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
@@ -48,6 +49,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.security.Key;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.Path;
 
 /**
  * Processes command line arguments for exporting a site and then
@@ -84,14 +91,19 @@ public class Main {
   @Option(name="-h", usage="host")
   private String host = "sites.google.com";
 
-  @Option(name="-smbJson", usage="load client secret json from a password protect samba folder")
-  private String smbJson = null; // e.g. smb://cnbjmsw36/users/28851505/client_secrets.json"
+  @Option(name="-smbJson", usage="load client secret json from a password protected samba folder")
+  private String smbJson = null; // e.g. smb://host/folder/client_secrets.json"
   
+  @Option(name="-encryptedJson", usage="load client secret json from an encrypted file")
+  private String encJson = null;
+
+  @Option(name="-decryptKey", usage="the key to decrypt encJson")
+  private String decKey = null;
   
 	private List<String> SCOPES = Arrays.asList("https://sites.google.com/feeds");
 
 	/** Directory to store user credentials for this application. */
-	private static final java.io.File DATA_STORE_DIR = new java.io.File("./ggdownloader");
+	private static final java.io.File DATA_STORE_DIR = new java.io.File(".");
 
 	/** Global instance of the {@link FileDataStoreFactory}. */
 	private static FileDataStoreFactory DATA_STORE_FACTORY;
@@ -133,6 +145,15 @@ public class Main {
 				NtlmPasswordAuthentication auth = new NtlmPasswordAuthentication("", user, pass);
 				SmbFile smbFile = new SmbFile(smbJson, auth);
 				in = new InputStreamReader(smbFile.getInputStream());
+			} else if (encJson != null && decKey != null) {
+	            // load the encrypted client secret json file
+	            byte[] encrypted = Files.readAllBytes(new File(encJson).toPath());
+	            // decode it
+	            Key aesKey = new SecretKeySpec(decKey.getBytes(), "AES");
+	            Cipher cipher = Cipher.getInstance("AES");
+	            cipher.init(Cipher.DECRYPT_MODE, aesKey);
+	            byte[] decrypted = cipher.doFinal(encrypted);
+				in = new InputStreamReader(new ByteArrayInputStream(decrypted));
 			} else {
 				in = new InputStreamReader(new FileInputStream(new java.io.File("./client_secrets.json")));
 			}
